@@ -209,6 +209,42 @@ export const TweetMedia = ({ tweet }: { tweet: EnrichedTweet }) => (
   </div>
 );
 
+const sanitizeTweet = (tweet: any): any => {
+  if (!tweet) return tweet;
+
+  const text = tweet.text ?? "";
+  const display_text_range = tweet.display_text_range ?? [0, Array.from(text).length];
+
+  const entities: any = {};
+  if (tweet.entities) {
+    entities.urls = Array.isArray(tweet.entities.urls) ? tweet.entities.urls : [];
+    entities.hashtags = Array.isArray(tweet.entities.hashtags) ? tweet.entities.hashtags : [];
+    entities.user_mentions = Array.isArray(tweet.entities.user_mentions) ? tweet.entities.user_mentions : [];
+    entities.symbols = Array.isArray(tweet.entities.symbols) ? tweet.entities.symbols : [];
+    if (Array.isArray(tweet.entities.media) && tweet.entities.media.length > 0) {
+      entities.media = tweet.entities.media;
+    }
+  } else {
+    entities.urls = [];
+    entities.hashtags = [];
+    entities.user_mentions = [];
+    entities.symbols = [];
+  }
+
+  const sanitized: any = {
+    ...tweet,
+    text,
+    display_text_range,
+    entities,
+  };
+
+  if (tweet.quoted_tweet) {
+    sanitized.quoted_tweet = sanitizeTweet(tweet.quoted_tweet);
+  }
+
+  return sanitized;
+};
+
 export const MagicTweet = ({
   tweet,
   components,
@@ -221,19 +257,7 @@ export const MagicTweet = ({
 }) => {
   // sanitize tweet data to ensure all fields that react-tweet's enrichTweet
   // depends on are present, preventing runtime crashes from missing properties
-  const text = tweet.text ?? "";
-  const sanitizedTweet = {
-    ...tweet,
-    text,
-    display_text_range: tweet.display_text_range ?? [0, Array.from(text).length],
-    entities: {
-      ...tweet.entities,
-      urls: tweet.entities?.urls ?? [],
-      hashtags: tweet.entities?.hashtags ?? [],
-      user_mentions: tweet.entities?.user_mentions ?? [],
-      symbols: tweet.entities?.symbols ?? [],
-    },
-  };
+  const sanitizedTweet = sanitizeTweet(tweet);
   const enrichedTweet = enrichTweet(sanitizedTweet);
   return (
     <div
